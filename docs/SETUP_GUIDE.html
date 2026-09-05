@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>FastAPI &plus; Docker &plus; PostgreSQL &mdash; Setup Notes</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <span id="markdown-mermaid" aria-hidden="true" data-config="{&quot;darkModeTheme&quot;:&quot;vscode&quot;,&quot;lightModeTheme&quot;:&quot;vscode&quot;,&quot;maxTextSize&quot;:50000,&quot;clickDrag&quot;:&quot;alt&quot;,&quot;showControls&quot;:&quot;onHoverOrFocus&quot;,&quot;resizable&quot;:true,&quot;maxHeight&quot;:&quot;&quot;}"></span>
+				<h1 id="fastapi--docker--postgresql--setup-notes">FastAPI + Docker + PostgreSQL — Setup Notes</h1>
+<p>These are your own notes explaining everything we've built so far, why each
+piece exists, and how they all connect. Written assuming you're new to all
+of this — FastAPI, Docker, and PostgreSQL alike.</p>
+<hr>
+<h2 id="1-the-big-picture">1. The big picture</h2>
+<p>You're building a backend (an API) using <strong>FastAPI</strong> (Python). That API
+needs somewhere to permanently store data — that's <strong>PostgreSQL</strong>, a
+database. Instead of installing PostgreSQL directly on Windows, it runs
+inside <strong>Docker</strong>, in an isolated little box called a &quot;container.&quot;</p>
+<p>Here's how the three pieces talk to each other:</p>
+<pre><code>Your browser / Postman
+        |
+        |  HTTP request (e.g. GET /db-check)
+        v
++-------------------+
+|   FastAPI app      |   &lt;-- runs on your Windows machine directly
+|   (main.py)        |       via: uvicorn main:app --reload
++-------------------+
+        |
+        |  SQL query, over a network connection to localhost:5432
+        v
++-------------------+
+|  PostgreSQL         |   &lt;-- runs INSIDE a Docker container
+|  (fastapi_postgres)|       Docker just isolates it; from FastAPI's
++-------------------+       point of view it's a normal database at
+                             localhost:5432
+</code></pre>
+<p>Two separate things have to be running at the same time for your app to
+work:</p>
+<ol>
+<li>The <strong>Postgres container</strong> (via Docker)</li>
+<li>The <strong>FastAPI server</strong> (via uvicorn, in your own terminal)</li>
+</ol>
+<hr>
+<h2 id="2-python-virtual-environment-venv">2. Python virtual environment (venv)</h2>
+<p><strong>What it is:</strong> A private, isolated copy of Python just for this project,
+living in the <code>venv/</code> folder. Any package you <code>pip install</code> goes in there,
+not into your system-wide Python. This means different projects can use
+different (even conflicting) package versions without interfering with
+each other.</p>
+<p><strong>Why it matters:</strong> If you ever see <code>'uvicorn' is not recognized</code>, it's
+because the venv isn't &quot;activated&quot; in your current terminal — Windows is
+looking for <code>uvicorn</code> in the system Python, not the project's private one.</p>
+<p><strong>How to activate it</strong>, from <code>D:\fastapi-app</code>:</p>
+<ul>
+<li>Command Prompt (cmd.exe): <code>venv\Scripts\activate.bat</code></li>
+<li>PowerShell: <code>.\venv\Scripts\Activate.ps1</code></li>
+</ul>
+<p>You'll know it worked because your prompt gets a <code>(venv)</code> prefix, e.g.:</p>
+<pre><code>(venv) D:\fastapi-app&gt;
+</code></pre>
+<p><strong><code>requirements.txt</code></strong> is the list of packages (and exact versions) this
+project depends on — FastAPI itself, the ASGI server (uvicorn), the
+database toolkit (SQLAlchemy), the Postgres driver (psycopg2-binary), etc.
+Anyone (including future-you on a new machine) can recreate your exact
+environment with:</p>
+<pre><code>pip install -r requirements.txt
+</code></pre>
+<hr>
+<h2 id="3-fastapi--the-backend-framework">3. FastAPI — the backend framework</h2>
+<p><strong>What it is:</strong> A Python framework for building APIs. You write plain
+Python functions, decorate them with routes (<code>@app.get(&quot;/something&quot;)</code>),
+and FastAPI turns them into a working HTTP API — plus it auto-generates
+interactive documentation for free.</p>
+<h3 id="mainpy"><code>main.py</code></h3>
+<pre><code class="language-python"><span class="hljs-keyword">from</span> fastapi <span class="hljs-keyword">import</span> FastAPI, Depends
+<span class="hljs-keyword">from</span> sqlalchemy <span class="hljs-keyword">import</span> text
+<span class="hljs-keyword">from</span> sqlalchemy.orm <span class="hljs-keyword">import</span> Session
+
+<span class="hljs-keyword">from</span> database <span class="hljs-keyword">import</span> get_db
+
+app = FastAPI()
+
+<span class="hljs-meta">@app.get(<span class="hljs-params"><span class="hljs-string">&quot;/health&quot;</span></span>)</span>
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">health_check</span>():
+    <span class="hljs-keyword">return</span> {<span class="hljs-string">&quot;status&quot;</span>: <span class="hljs-string">&quot;healthy&quot;</span>}
+
+<span class="hljs-meta">@app.get(<span class="hljs-params"><span class="hljs-string">&quot;/db-check&quot;</span></span>)</span>
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">db_check</span>(<span class="hljs-params">db: Session = Depends(<span class="hljs-params">get_db</span>)</span>):
+    db.execute(text(<span class="hljs-string">&quot;SELECT 1&quot;</span>))
+    <span class="hljs-keyword">return</span> {<span class="hljs-string">&quot;database&quot;</span>: <span class="hljs-string">&quot;connected&quot;</span>}
+</code></pre>
+<ul>
+<li><code>app = FastAPI()</code> — creates the application object; everything hangs off
+this.</li>
+<li><code>@app.get(&quot;/health&quot;)</code> — defines a <strong>route</strong>: &quot;when someone sends a GET
+request to <code>/health</code>, run this function.&quot; This one just proves the
+server itself is alive.</li>
+<li><code>@app.get(&quot;/db-check&quot;)</code> — same idea, but this one also talks to the
+database (<code>SELECT 1</code> is a trivial query — if it succeeds, the DB
+connection is working end-to-end).</li>
+<li><code>Depends(get_db)</code> — FastAPI's <strong>dependency injection</strong>: before running
+<code>db_check</code>, FastAPI calls <code>get_db()</code> (from <code>database.py</code>) to get a
+database session, hands it to the function as <code>db</code>, and automatically
+closes it afterward — even if the function raises an error.</li>
+</ul>
+<h3 id="running-the-server">Running the server</h3>
+<p>From <code>D:\fastapi-app</code>, with the venv activated:</p>
+<pre><code>uvicorn main:app --reload
+</code></pre>
+<ul>
+<li><code>uvicorn</code> — the actual server program that runs your FastAPI app and
+listens for HTTP requests. FastAPI itself doesn't include a server; it
+needs uvicorn (or similar) to actually serve traffic.</li>
+<li><code>main:app</code> — &quot;in the file <code>main.py</code>, use the object named <code>app</code>.&quot;</li>
+<li><code>--reload</code> — watches your files and restarts the server automatically
+whenever you save a change. Great for development, never used in
+production.</li>
+</ul>
+<p>Once running, you get:</p>
+<ul>
+<li><strong><a href="http://127.0.0.1:8000/docs">http://127.0.0.1:8000/docs</a></strong> — an interactive page (Swagger UI) where
+you can see every route and click &quot;Try it out&quot; to call it directly in
+the browser. This is the fastest way to explore your own API.</li>
+<li><strong><a href="http://127.0.0.1:8000/health">http://127.0.0.1:8000/health</a></strong> and <strong>/db-check</strong> — the routes
+themselves.</li>
+</ul>
+<p>A plain <strong><a href="http://127.0.0.1:8000/">http://127.0.0.1:8000/</a></strong> returns 404 — that's expected, since we
+never defined a route at <code>/</code>.</p>
+<hr>
+<h2 id="4-docker--running-postgres-in-a-box">4. Docker — running Postgres in a box</h2>
+<p><strong>What it is:</strong> Docker lets you run software inside lightweight, isolated
+&quot;containers&quot; instead of installing it directly on your machine. A
+container packages up an application plus everything it needs to run.
+Think of it as a disposable mini-computer that starts in seconds.</p>
+<p><strong>Why we're using it for Postgres:</strong> Instead of installing PostgreSQL
+natively on Windows (which is fiddly to configure and uninstall cleanly),
+we run the official <code>postgres</code> image in a container. It's easy to
+start/stop/delete/reset without touching your actual system.</p>
+<p><strong>What we had to set up:</strong></p>
+<ul>
+<li>Installed <strong>Docker Desktop</strong> (via <code>winget install Docker.DockerDesktop</code>)</li>
+<li>Docker needs virtualization support. Your machine's BIOS already had it
+enabled, but two Windows features were also required and had to be
+turned on manually (via an elevated PowerShell):
+<ul>
+<li><code>Microsoft-Windows-Subsystem-Linux</code> (WSL)</li>
+<li><code>VirtualMachinePlatform</code></li>
+<li>Then a system reboot, plus <code>wsl --update</code> and
+<code>wsl --set-default-version 2</code>.</li>
+</ul>
+</li>
+</ul>
+<p>Once Docker Desktop is installed and running (check its tray icon says
+&quot;Running&quot; / &quot;Engine running&quot;), the <code>docker</code> command works from any
+terminal.</p>
+<hr>
+<h2 id="5-postgresql--the-database-itself">5. PostgreSQL — the database itself</h2>
+<p><strong>What it is:</strong> A relational database — data lives in tables with rows and
+columns, and you query it with SQL.</p>
+<h3 id="postgresqldocker-composeyml"><code>PostgreSQL/docker-compose.yml</code></h3>
+<p>Docker Compose is a way to describe a container's configuration in a file
+instead of typing a long <code>docker run ...</code> command every time.</p>
+<pre><code class="language-yaml"><span class="hljs-attr">services:</span>
+  <span class="hljs-attr">postgres_db:</span>
+    <span class="hljs-attr">image:</span> <span class="hljs-string">postgres:16-alpine</span>
+    <span class="hljs-attr">container_name:</span> <span class="hljs-string">fastapi_postgres</span>
+    <span class="hljs-attr">restart:</span> <span class="hljs-string">always</span>
+    <span class="hljs-attr">environment:</span>
+      <span class="hljs-attr">POSTGRES_USER:</span> <span class="hljs-string">myuser</span>
+      <span class="hljs-attr">POSTGRES_PASSWORD:</span> <span class="hljs-string">Denis_Jr</span>
+      <span class="hljs-attr">POSTGRES_DB:</span> <span class="hljs-string">mydatabase</span>
+    <span class="hljs-attr">ports:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">&quot;5432:5432&quot;</span>
+    <span class="hljs-attr">volumes:</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">postgres_data:/var/lib/postgresql/data</span>
+      <span class="hljs-bullet">-</span> <span class="hljs-string">./init:/docker-entrypoint-initdb.d</span>
+
+<span class="hljs-attr">volumes:</span>
+  <span class="hljs-attr">postgres_data:</span>
+</code></pre>
+<p>Line by line:</p>
+<ul>
+<li><code>image: postgres:16-alpine</code> — use the official Postgres version 16
+image, &quot;alpine&quot; meaning a small/lightweight Linux base.</li>
+<li><code>container_name: fastapi_postgres</code> — the friendly name Docker gives this
+container (you'll see it in <code>docker ps</code>).</li>
+<li><code>restart: always</code> — if the container crashes or Docker restarts, this
+container starts back up automatically.</li>
+<li><code>environment:</code> — these three variables configure Postgres on its first
+startup: the superuser username, password, and the name of the default
+database to create. <strong>These credentials are what your app uses to
+connect</strong> — see the <code>.env</code> file below, where they must match exactly.</li>
+<li><code>ports: &quot;5432:5432&quot;</code> — maps port 5432 inside the container to port 5432
+on your Windows machine (<code>host:container</code>). This is what makes
+<code>localhost:5432</code> reachable from your FastAPI app, which runs outside
+Docker.</li>
+<li><code>volumes:</code> — two different kinds:
+<ul>
+<li><code>postgres_data:/var/lib/postgresql/data</code> — a <strong>named volume</strong>. This is
+where Postgres actually stores your data permanently. Even if you
+delete and recreate the container, this volume (managed by Docker)
+survives, so your data isn't lost. It's only deleted if you explicitly
+run <code>docker compose down -v</code> (the <code>-v</code> removes volumes too).</li>
+<li><code>./init:/docker-entrypoint-initdb.d</code> — a <strong>bind mount</strong> of your local
+<code>PostgreSQL/init/</code> folder. Postgres automatically runs any <code>.sql</code>
+files it finds there — but <strong>only once</strong>, the very first time it
+starts against an empty data volume. It will NOT re-run on every
+restart, and it won't pick up edits automatically like <code>--reload</code>
+does for FastAPI. To test changes to init scripts, you must wipe and
+recreate: <code>docker compose down -v &amp;&amp; docker compose up -d</code>.</li>
+</ul>
+</li>
+</ul>
+<h3 id="postgresqlinit01_initsql"><code>PostgreSQL/init/01_init.sql</code></h3>
+<p>The one-time starter script — creates a sample <code>items</code> table:</p>
+<pre><code class="language-sql"><span class="hljs-keyword">CREATE</span> <span class="hljs-keyword">TABLE</span> IF <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">EXISTS</span> items (
+    id SERIAL <span class="hljs-keyword">PRIMARY</span> KEY,
+    name <span class="hljs-type">VARCHAR</span>(<span class="hljs-number">100</span>) <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span>,
+    created_at <span class="hljs-type">TIMESTAMP</span> <span class="hljs-keyword">NOT</span> <span class="hljs-keyword">NULL</span> <span class="hljs-keyword">DEFAULT</span> NOW()
+);
+</code></pre>
+<p>This is the table we'll build a real CRUD endpoint against next.</p>
+<h3 id="commands-youll-use-often">Commands you'll use often</h3>
+<p>Run these from <code>D:\fastapi-app\PostgreSQL</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>docker compose up -d</code></td>
+<td>Start the container in the background</td>
+</tr>
+<tr>
+<td><code>docker compose down</code></td>
+<td>Stop and remove the container (data is kept, in the named volume)</td>
+</tr>
+<tr>
+<td><code>docker compose down -v</code></td>
+<td>Stop, remove the container, <strong>and delete all data</strong></td>
+</tr>
+<tr>
+<td><code>docker compose ps</code></td>
+<td>Check if the container is running</td>
+</tr>
+<tr>
+<td><code>docker compose logs -f</code></td>
+<td>Watch Postgres's live logs (useful for debugging)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Always manage this container through <code>docker compose</code>, from this folder.
+Don't use plain <code>docker run postgres</code> — we hit exactly this problem once
+already (see Troubleshooting below): a stray container with none of the
+right environment variables set, which crashed on startup.</p>
+</blockquote>
+<hr>
+<h2 id="6-connecting-fastapi-to-postgresql">6. Connecting FastAPI to PostgreSQL</h2>
+<h3 id="env"><code>.env</code></h3>
+<pre><code>DATABASE_URL=postgresql://myuser:Denis_Jr@localhost:5432/mydatabase
+</code></pre>
+<p>A <strong>connection string</strong> in the form
+<code>postgresql://&lt;user&gt;:&lt;password&gt;@&lt;host&gt;:&lt;port&gt;/&lt;database&gt;</code> — these values
+must exactly match the <code>environment:</code> block in <code>docker-compose.yml</code>.</p>
+<p><code>.env</code> files hold configuration/secrets that shouldn't be hardcoded into
+your source code. If you ever set up git for this project, <code>.env</code> should
+be added to <code>.gitignore</code> so the password never gets committed.</p>
+<h3 id="databasepy"><code>database.py</code></h3>
+<pre><code class="language-python"><span class="hljs-keyword">import</span> os
+<span class="hljs-keyword">from</span> dotenv <span class="hljs-keyword">import</span> load_dotenv
+<span class="hljs-keyword">from</span> sqlalchemy <span class="hljs-keyword">import</span> create_engine
+<span class="hljs-keyword">from</span> sqlalchemy.orm <span class="hljs-keyword">import</span> sessionmaker, declarative_base
+
+load_dotenv()
+
+DATABASE_URL = os.getenv(<span class="hljs-string">&quot;DATABASE_URL&quot;</span>)
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=<span class="hljs-literal">False</span>, autoflush=<span class="hljs-literal">False</span>, bind=engine)
+Base = declarative_base()
+
+<span class="hljs-keyword">def</span> <span class="hljs-title function_">get_db</span>():
+    db = SessionLocal()
+    <span class="hljs-keyword">try</span>:
+        <span class="hljs-keyword">yield</span> db
+    <span class="hljs-keyword">finally</span>:
+        db.close()
+</code></pre>
+<ul>
+<li><code>load_dotenv()</code> — reads the <code>.env</code> file and makes its values available
+via <code>os.getenv(...)</code>.</li>
+<li><code>engine</code> — SQLAlchemy's connection to the database. It doesn't connect
+immediately; it's more like a reusable &quot;how to reach the database&quot;
+object.</li>
+<li><code>SessionLocal</code> — a factory for creating individual conversations
+(&quot;sessions&quot;) with the database. Each API request gets its own session.</li>
+<li><code>Base</code> — the class your future table models (Python classes that map to
+SQL tables) will inherit from. Not used yet, but this is the foundation
+for when we define models like <code>class Item(Base): ...</code>.</li>
+<li><code>get_db()</code> — a generator function used as a FastAPI dependency. It opens
+a session, <code>yield</code>s it to whichever endpoint asked for it, and the
+<code>finally: db.close()</code> guarantees the session is cleaned up afterward no
+matter what happens in the endpoint.</li>
+</ul>
+<p><strong>SQLAlchemy</strong> is the &quot;ORM&quot; (Object-Relational Mapper) — it lets you work
+with the database using Python objects and method calls instead of writing
+raw SQL strings everywhere (though you still can, like the <code>SELECT 1</code> in
+<code>/db-check</code>).</p>
+<hr>
+<h2 id="7-everyday-workflow--starting-everything-up">7. Everyday workflow — starting everything up</h2>
+<p>Two terminals, two things running:</p>
+<p><strong>Terminal 1 — the database:</strong></p>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> D:\fastapi<span class="hljs-literal">-app</span>\PostgreSQL
+docker compose up <span class="hljs-literal">-d</span>
+</code></pre>
+<p><strong>Terminal 2 — the API:</strong></p>
+<pre><code class="language-powershell"><span class="hljs-built_in">cd</span> D:\fastapi<span class="hljs-literal">-app</span>
+.\venv\Scripts\Activate.ps1     <span class="hljs-comment"># (or activate.bat in cmd.exe)</span>
+uvicorn main:app <span class="hljs-literal">--reload</span>
+</code></pre>
+<p>Then test in your browser or Postman:</p>
+<ul>
+<li><code>GET http://127.0.0.1:8000/health</code> → <code>{&quot;status&quot;: &quot;healthy&quot;}</code></li>
+<li><code>GET http://127.0.0.1:8000/db-check</code> → <code>{&quot;database&quot;: &quot;connected&quot;}</code></li>
+<li><code>http://127.0.0.1:8000/docs</code> → interactive API explorer</li>
+</ul>
+<hr>
+<h2 id="8-troubleshooting-log-things-we-already-ran-into">8. Troubleshooting log (things we already ran into)</h2>
+<ul>
+<li><strong><code>404 Not Found</code> on <code>GET /</code></strong> — Not a bug. We never defined a route at
+<code>/</code>, only <code>/health</code> and <code>/db-check</code>. Expected behavior.</li>
+<li><strong><code>docker</code> not recognized</strong> — Docker Desktop wasn't installed yet.
+Installed via winget.</li>
+<li><strong>Docker said &quot;virtualization not enabled, contact your administrator&quot;</strong>
+— Misleading generic message. BIOS virtualization was actually already
+on; the real issue was the Windows features (WSL + Virtual Machine
+Platform) not being enabled yet. Turned on via an elevated PowerShell,
+then rebooted.</li>
+<li><strong><code>uvicorn</code> not recognized</strong> — The venv wasn't activated in that
+terminal (no <code>(venv)</code> prefix in the prompt), so Windows couldn't find
+it. Also, running it from the wrong folder (<code>PostgreSQL/</code> instead of the
+project root) wouldn't find <code>main.py</code> anyway.</li>
+<li><strong><code>Database is uninitialized and superuser password is not specified</code></strong>
+— Turned out to be a second, unrelated container named <code>postgresql</code>
+that had been started with a plain <code>docker run</code> (no environment
+variables set), separate from our <code>docker-compose.yml</code>-managed
+<code>fastapi_postgres</code> container. Removed the stray one; our real container
+was fine the whole time.</li>
+</ul>
+<hr>
+<h2 id="9-glossary">9. Glossary</h2>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>venv</strong></td>
+<td>An isolated set of Python packages just for this project</td>
+</tr>
+<tr>
+<td><strong>FastAPI</strong></td>
+<td>The Python framework used to define API routes</td>
+</tr>
+<tr>
+<td><strong>uvicorn</strong></td>
+<td>The server program that actually runs the FastAPI app and handles HTTP traffic</td>
+</tr>
+<tr>
+<td><strong>route / endpoint</strong></td>
+<td>A specific URL path + HTTP method your API responds to, e.g. <code>GET /health</code></td>
+</tr>
+<tr>
+<td><strong>Docker</strong></td>
+<td>Runs applications in isolated &quot;containers&quot;</td>
+</tr>
+<tr>
+<td><strong>image</strong></td>
+<td>A blueprint for a container (e.g. <code>postgres:16-alpine</code>)</td>
+</tr>
+<tr>
+<td><strong>container</strong></td>
+<td>A running instance of an image</td>
+</tr>
+<tr>
+<td><strong>Docker Compose</strong></td>
+<td>A tool/file format for defining and running multi-container setups declaratively</td>
+</tr>
+<tr>
+<td><strong>volume (named)</strong></td>
+<td>Docker-managed persistent storage that survives container recreation</td>
+</tr>
+<tr>
+<td><strong>bind mount</strong></td>
+<td>A folder on your machine mapped directly into the container</td>
+</tr>
+<tr>
+<td><strong>PostgreSQL / Postgres</strong></td>
+<td>The relational database itself</td>
+</tr>
+<tr>
+<td><strong>SQLAlchemy</strong></td>
+<td>Python's ORM — lets you interact with the database using Python objects</td>
+</tr>
+<tr>
+<td><strong>psycopg2</strong></td>
+<td>The low-level driver SQLAlchemy uses to actually speak to Postgres</td>
+</tr>
+<tr>
+<td><strong>ORM</strong></td>
+<td>Object-Relational Mapper — maps database tables to Python classes</td>
+</tr>
+<tr>
+<td><strong>dependency injection (<code>Depends</code>)</strong></td>
+<td>FastAPI's way of supplying things (like a DB session) into your route functions automatically</td>
+</tr>
+<tr>
+<td><strong><code>.env</code> file</strong></td>
+<td>Stores config/secrets outside your source code</td>
+</tr>
+<tr>
+<td><strong>connection string</strong></td>
+<td>A single string encoding how to connect to a database (user, password, host, port, db name)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="10-whats-next">10. What's next</h2>
+<ol>
+<li>Write a proper SQLAlchemy <strong>model</strong> for the <code>items</code> table (a Python
+class mapped to that table).</li>
+<li>Build a real <strong>CRUD endpoint</strong> — create and read items via the API,
+backed by the database.</li>
+<li>Test everything with <strong>Postman</strong> — including what happens when you send
+bad data, and what HTTP status codes come back and why (<code>200</code>, <code>201</code>,
+<code>404</code>, <code>422</code>, <code>500</code>, etc).</li>
+<li>Later: introduce <strong>Alembic</strong> for database migrations — the proper way
+to evolve your schema over time without wiping data (unlike our current
+init-script approach, which only runs once).</li>
+</ol>
+
+            
+            
+        </body>
+        </html>

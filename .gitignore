@@ -1,0 +1,19 @@
+# Secrets — never commit these
+.env
+atlas-credentials.env
+# Contains the real MongoDB Atlas password, visible in the screenshot itself
+backend/images/mongo-db set.png
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Stale leftover at the root — was locked by a running Docker container
+# during the backend/ restructure, so it was copied (not moved) into
+# backend/PostgreSQL instead. Delete this root copy once the container
+# is stopped; only backend/PostgreSQL is meant to be tracked.
+/PostgreSQL/
+
+# Claude Code local session state (machine-specific, not shared)
+.claude/
