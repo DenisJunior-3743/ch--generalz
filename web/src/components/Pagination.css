@@ -1,0 +1,21 @@
+@reference "../index.css";
+
+.pagination {
+  @apply mt-3.5 flex items-center justify-between gap-3 border-t border-border pt-3.5;
+}
+
+.pagination-info {
+  @apply text-xs text-muted-foreground;
+}
+
+.pagination-button {
+  @apply cursor-pointer rounded-sm border border-border bg-transparent px-3.5 py-1.5 text-xs font-medium text-foreground;
+}
+
+.pagination-button:hover:not(:disabled) {
+  @apply bg-background;
+}
+
+.pagination-button:disabled {
+  @apply cursor-not-allowed opacity-45;
+}

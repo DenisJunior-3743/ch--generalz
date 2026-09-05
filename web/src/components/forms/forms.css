@@ -1,0 +1,67 @@
+/*
+ * Shared form classes used by TextField/SelectField and every page's
+ * <form> (RegisterPage, StudentRegistrationPage, UsersPage, etc). Built
+ * from Tailwind utilities via @apply so those pages get the Tailwind
+ * rebuild with zero JSX changes.
+ */
+@reference "../../index.css";
+
+.form-grid {
+  @apply grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4;
+}
+
+.form-field {
+  @apply flex flex-col gap-1.5;
+}
+
+.form-label {
+  @apply text-xs font-semibold text-foreground;
+}
+
+.form-input {
+  @apply rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground;
+}
+
+.form-input:focus {
+  @apply outline-none ring-3 ring-navy/12 border-navy;
+}
+
+.form-input--error {
+  @apply border-danger;
+}
+
+.form-input--error:focus {
+  @apply ring-3 ring-danger/12;
+}
+
+.form-error {
+  @apply m-0 text-xs text-danger;
+}
+
+.form-actions {
+  @apply mt-4 flex items-center gap-3;
+}
+
+.form-submit {
+  @apply cursor-pointer rounded-md bg-navy px-5 py-2.5 text-sm font-semibold text-white;
+}
+
+.form-submit:hover:not(:disabled) {
+  @apply bg-navy-dark;
+}
+
+.form-submit:disabled {
+  @apply cursor-not-allowed opacity-60;
+}
+
+.form-banner {
+  @apply mb-4 rounded-md px-3.5 py-2.5 text-sm font-medium;
+}
+
+.form-banner--success {
+  @apply border border-success/25 bg-success/10 text-success-dark;
+}
+
+.form-banner--error {
+  @apply border border-danger/25 bg-danger/8 text-danger-dark;
+}

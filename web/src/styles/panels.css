@@ -1,0 +1,76 @@
+/*
+ * Shared classes rendered by pages that own no CSS file of their own
+ * (StudentsPage, StaffPage, MarksPage, UsersPage, MyMarksPage,
+ * FacultiesPage, ProgramsPage, CoursesPage, SemestersPage, GradeBandsPage,
+ * StudentRegistrationPage). Built from Tailwind utilities via @apply so
+ * those pages get the Tailwind rebuild with zero JSX changes.
+ */
+
+.page-header {
+  @apply mb-5;
+}
+
+.page-header h1 {
+  @apply m-0 mb-1 text-2xl text-foreground;
+}
+
+.page-header p {
+  @apply m-0 text-sm text-muted-foreground;
+}
+
+.panel {
+  @apply mb-5 rounded-lg border border-border bg-surface p-5 shadow-sm;
+}
+
+.panel h2 {
+  @apply m-0 mb-4 text-base text-foreground;
+}
+
+.panel-toolbar {
+  @apply mb-4 flex flex-wrap items-center justify-between gap-3;
+}
+
+.panel-filter {
+  @apply flex items-center gap-2 text-xs text-muted-foreground;
+}
+
+.panel-filter select {
+  @apply rounded-sm border border-border bg-surface px-2.5 py-1.5 text-xs text-foreground;
+}
+
+.list-state {
+  @apply m-0 py-6 text-center text-sm text-muted-foreground;
+}
+
+.list-state--error {
+  @apply flex flex-col items-center gap-2.5 text-danger-dark;
+}
+
+.data-table-wrapper {
+  @apply overflow-x-auto;
+}
+
+.data-table {
+  @apply w-full border-collapse text-sm;
+}
+
+.data-table th,
+.data-table td {
+  @apply whitespace-nowrap border-b border-border px-3 py-2.5 text-left text-foreground;
+}
+
+.data-table th {
+  @apply text-xs font-semibold uppercase tracking-wide text-muted-foreground;
+}
+
+.selected-student-bar {
+  @apply mb-4 flex flex-wrap items-center justify-between gap-3;
+}
+
+.selected-student-bar h2 {
+  @apply m-0;
+}
+
+.selected-student-reg {
+  @apply font-normal text-muted-foreground;
+}

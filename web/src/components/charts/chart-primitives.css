@@ -1,0 +1,80 @@
+/*
+ * SVG chart-drawing primitives (gridlines, marks, line paths, dots) —
+ * stroke/fill on dynamically-rendered <path>/<line>/<circle> nodes with
+ * :hover/:focus-visible states aren't a good fit for inline Tailwind
+ * utility classes, so these stay hand-written. Everything else in the
+ * charts (card chrome, tooltip, legend, table view) is inline Tailwind —
+ * see ChartCard.jsx/BarChart.jsx/LineChart.jsx/StackedBarChart.jsx/
+ * ChartTooltip.jsx. Driven by styles/chart-theme.css's color tokens.
+ */
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+
+.chart-gridline {
+  stroke: var(--chart-gridline);
+  stroke-width: 1;
+}
+
+.chart-baseline {
+  stroke: var(--chart-baseline);
+  stroke-width: 1;
+}
+
+.chart-tick-label {
+  fill: var(--chart-text-muted);
+  font-size: 10.5px;
+}
+
+.chart-axis-label {
+  fill: var(--chart-text-secondary);
+  font-size: 11px;
+}
+
+.chart-value-label {
+  fill: var(--chart-text-primary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.chart-mark {
+  cursor: pointer;
+  outline: none;
+}
+
+.chart-mark:hover,
+.chart-mark:focus-visible {
+  filter: brightness(1.12);
+}
+
+.chart-mark:focus-visible {
+  outline: 2px solid var(--color-navy);
+  outline-offset: 2px;
+}
+
+.chart-line-path {
+  fill: none;
+  stroke: var(--chart-series-primary);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-line-area {
+  fill: var(--chart-series-primary);
+  opacity: 0.1;
+}
+
+.chart-dot {
+  stroke: var(--chart-surface);
+  stroke-width: 2;
+}
+
+.chart-crosshair {
+  stroke: var(--chart-baseline);
+  stroke-width: 1;
+}

@@ -1,0 +1,28 @@
+@import "tailwindcss";
+@import "./styles/theme.css";
+@import "./styles/chart-theme.css";
+@import "./styles/panels.css";
+
+/*
+ * Tailwind's Preflight already resets box-sizing, form-element fonts, and
+ * anchor color/decoration — only the genuine brand customizations are left
+ * to declare here.
+ */
+@layer base {
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-weight: 600;
+  }
+}
