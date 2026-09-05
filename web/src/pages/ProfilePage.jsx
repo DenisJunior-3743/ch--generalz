@@ -4,6 +4,7 @@ import { hasPermission } from "../auth/permissions";
 import { getStaffById } from "../api/staff";
 import { getStudentByRegNumber } from "../api/students";
 import { deleteMyPhoto } from "../api/profile";
+import { getErrorMessage } from "../api/errors";
 import { useFaculties } from "../hooks/useFaculties";
 import { usePrograms } from "../hooks/usePrograms";
 import { formatRegNumber } from "../utils/format";
@@ -59,7 +60,7 @@ export default function ProfilePage() {
           if (!cancelled) setLinked({ status: "loaded", record, message: "" });
         } catch (error) {
           if (!cancelled) {
-            setLinked({ status: "error", record: null, message: error.detail || "Couldn't load your staff record." });
+            setLinked({ status: "error", record: null, message: getErrorMessage(error, "Couldn't load your staff record.") });
           }
         }
       } else if (user?.student_reg_number) {
@@ -68,7 +69,7 @@ export default function ProfilePage() {
           if (!cancelled) setLinked({ status: "loaded", record, message: "" });
         } catch (error) {
           if (!cancelled) {
-            setLinked({ status: "error", record: null, message: error.detail || "Couldn't load your student record." });
+            setLinked({ status: "error", record: null, message: getErrorMessage(error, "Couldn't load your student record.") });
           }
         }
       } else if (!cancelled) {
@@ -109,7 +110,7 @@ export default function ProfilePage() {
       await deleteMyPhoto();
       updatePhotoUrl(null);
     } catch (error) {
-      setRemoveError(error.detail || "Couldn't remove the photo.");
+      setRemoveError(getErrorMessage(error, "Couldn't remove the photo."));
     } finally {
       setRemoving(false);
     }
