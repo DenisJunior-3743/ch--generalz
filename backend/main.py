@@ -27,8 +27,13 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://10.39.113.143:5173"],
-    # Three cases beyond plain localhost: (1) ngrok hands out a new
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://10.39.113.143:5173",
+        "https://ch-generalz-dygc.vercel.app",  # the deployed web frontend
+    ],
+    # Four cases beyond plain localhost: (1) ngrok hands out a new
     # https://<random>.ngrok-free.app hostname every run, so match the
     # domain instead of hardcoding one — see vite.config.js's allowedHosts
     # for the frontend-side counterpart. (2) a phone on the same Wi-Fi
@@ -37,9 +42,13 @@ app.add_middleware(
     # localhost — match any private LAN address on the dev server's port.
     # `localhost` and `127.0.0.1` are different Origins to a browser even
     # though they're the same machine, hence both being listed explicitly
-    # above instead of relying on the regex for that one.
+    # above instead of relying on the regex for that one. (3) Vercel gives
+    # every preview deployment (per branch/PR) its own random *.vercel.app
+    # subdomain too, alongside the fixed production one already listed
+    # above — match the whole domain so those don't need adding by hand
+    # each time, same reasoning as the ngrok case.
     allow_origin_regex=(
-        r"https://.*\.(ngrok-free\.app|ngrok-free\.dev|ngrok\.io|ngrok\.app)"
+        r"https://.*\.(ngrok-free\.app|ngrok-free\.dev|ngrok\.io|ngrok\.app|vercel\.app)"
         r"|http://(192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}):5173"
         r"|http://10.39.113.143:5173"
     ),
