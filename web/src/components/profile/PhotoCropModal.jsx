@@ -3,6 +3,7 @@ import Cropper from "react-easy-crop";
 import Modal from "../Modal";
 import { getCroppedImageBlob } from "./cropImage";
 import { uploadMyPhoto } from "../../api/profile";
+import { getErrorMessage } from "../../api/errors";
 
 export default function PhotoCropModal({ file, onClose, onUploaded }) {
   const [imageSrc] = useState(() => URL.createObjectURL(file));
@@ -33,7 +34,7 @@ export default function PhotoCropModal({ file, onClose, onUploaded }) {
       onUploaded(result.photo_url);
       onClose();
     } catch (err) {
-      setError(err.detail || "Couldn't upload the photo. Try again.");
+      setError(getErrorMessage(err, "Couldn't upload the photo. Try again."));
     } finally {
       setPending(false);
     }
