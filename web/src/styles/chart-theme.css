@@ -1,0 +1,24 @@
+:root {
+  /* Chart chrome */
+  --chart-surface: #ffffff;
+  --chart-text-primary: var(--color-text);
+  --chart-text-secondary: var(--color-text-muted);
+  --chart-text-muted: #898781;
+  --chart-gridline: #e1e0d9;
+  --chart-baseline: #c3c2b7;
+
+  /* Single-hue jobs (magnitude bars, trend lines) — brand navy */
+  --chart-series-primary: var(--color-navy);
+
+  /* Categorical — part-to-whole (gender split), validated as a 3-slot set */
+  --chart-cat-1: #2a78d6;
+  --chart-cat-2: #eb6834;
+  --chart-cat-3: #1baf7a;
+
+  /* Ordinal ramp — one hue, monotone lightness (grade bands, worst→best) */
+  --chart-ordinal-1: #86b6ef;
+  --chart-ordinal-2: #5598e7;
+  --chart-ordinal-3: #2a78d6;
+  --chart-ordinal-4: #1c5cab;
+  --chart-ordinal-5: #104281;
+}
