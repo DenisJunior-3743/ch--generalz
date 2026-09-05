@@ -129,7 +129,7 @@ export default function StudentRegistrationPage() {
               <div className="form-grid">
                 <TextField
                   label="Registration number"
-                  placeholder="e.g. FCI-BSE-2026-0001"
+                  placeholder="e.g. FCI/BSE/2026/0001"
                   error={errors.reg_number}
                   {...register("reg_number")}
                 />

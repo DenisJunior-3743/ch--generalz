@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseRegNumber } from "../utils/format";
 
 const currentYear = new Date().getFullYear();
 
@@ -6,9 +7,7 @@ export const studentSchema = z.object({
   reg_number: z
     .string()
     .min(1, "Registration number is required")
-    .refine((v) => !v.includes("/"), {
-      message: "Can't contain '/' — use dashes instead, e.g. FCI-BSE-2026-0001",
-    }),
+    .transform(parseRegNumber),
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
   email: z
